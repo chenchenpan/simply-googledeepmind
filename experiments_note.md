@@ -3,7 +3,6 @@
 ## Index
 
 - [2026-06-12](#experiment-log-3)
-- [2026-04-17](#experiment-log-2)
 - [2026-04-16](#experiment-log-1)
 
 ---
@@ -102,25 +101,6 @@ git rebase <base> --exec 'git commit --amend -m "$(git log -1 --format=%s)"'
 
 - Keep the fork current: `git fetch upstream && git rebase upstream/main &&
   git push --force-with-lease origin main`.
-
----
-
-<a id="experiment-log-2"></a>
-# Experiment Log
-
-## Date
-
-2026-04-17
-
-## Goal
-
-## Environment
-
-## Steps
-
-## Results
-
-## Next steps
 
 ---
 
