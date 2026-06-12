@@ -2,8 +2,125 @@
 
 ## Index
 
-- [2026-04-16](#experiment-log-1)
+- [2026-06-12](#experiment-log-3)
 - [2026-04-17](#experiment-log-2)
+- [2026-04-16](#experiment-log-1)
+
+---
+
+<a id="experiment-log-3"></a>
+# Experiment Log
+
+## Date
+
+2026-06-12
+
+## Goal
+
+Sync this fork with the upstream repo and contribute a subset of local changes
+back upstream via pull requests.
+
+## Environment
+
+| Component | Value |
+|---|---|
+| Fork (`origin`) | `github.com/chenchenpan/simply-googledeepmind` |
+| Upstream | `github.com/google-deepmind/simply` |
+| Commit identity | `chenchenpan <chenchenpan@gmail.com>` (local to this repo) |
+| Auth | PAT via `credential.helper=store`, scopes `repo` + `workflow` |
+
+## Steps
+
+### 1. Identify the upstream repo
+
+The fork had only the `origin` remote. Found the parent via the GitHub API
+(`api.github.com/repos/chenchenpan/simply-googledeepmind` → parent
+`google-deepmind/simply`) and added it as `upstream`.
+
+### 2. Sync `main` with upstream
+
+`main` was 5 ahead / 6 behind. Rebased onto `upstream/main`, re-authoring the
+5 local commits to `chenchenpan@gmail.com` so GitHub attributes them correctly:
+
+```bash
+git fetch upstream
+git rebase upstream/main --exec 'git commit --amend --reset-author --no-edit'
+git push --force-with-lease origin main
+```
+
+### 3. Set up credential caching
+
+`gh` is not installed. Seeded a PAT into `~/.git-credentials` (perms 600) with
+`credential.helper=store` so pushes don't prompt. Note: pushing changes under
+`.github/workflows/` requires the token to have the `workflow` scope, not just
+`repo`.
+
+### 4. Contribute a subset of commits (fork → PR)
+
+Created a clean branch per change off `upstream/main`, cherry-picked only the
+wanted commit, pushed to the fork, and opened a PR via the cross-fork compare
+URL:
+
+```bash
+git switch -c <branch> upstream/main
+git cherry-pick <sha>
+git push origin <branch>
+# PR: github.com/google-deepmind/simply/compare/main...chenchenpan:simply-googledeepmind:<branch>?expand=1
+```
+
+Two PRs opened:
+- `add-uv-setup-readme` — README "Quick setup with uv" subsection.
+- `fix-duplicate-tfds-uv-lock` — dedup `tensorflow-datasets` in `uv.lock`.
+
+### 5. Clean commit messages
+
+Removed the `Co-Authored-By: Claude` trailer from all commits before they went
+public (body was trailer-only, so the new message is just the subject):
+
+```bash
+git rebase <base> --exec 'git commit --amend -m "$(git log -1 --format=%s)"'
+```
+
+### 6. Resolve and clean up
+
+- Signed the upstream CLA.
+- README PR **merged** upstream (`5e869bd`) → deleted its branch (local + fork)
+  and rebased `main`, which auto-dropped the now-upstream commit.
+- uv.lock PR **abandoned** → deleted its branch; the fix stays on the fork's
+  `main` only.
+
+## Results
+
+| Item | Outcome |
+|---|---|
+| `main` vs `upstream/main` | 4 ahead, 0 behind (3 experiment notes + local uv.lock fix) |
+| README contribution | Merged upstream (`5e869bd`) |
+| uv.lock contribution | Abandoned (kept locally) |
+| Fork `origin/main` | In sync with local `main` |
+
+## Next steps
+
+- Keep the fork current: `git fetch upstream && git rebase upstream/main &&
+  git push --force-with-lease origin main`.
+
+---
+
+<a id="experiment-log-2"></a>
+# Experiment Log
+
+## Date
+
+2026-04-17
+
+## Goal
+
+## Environment
+
+## Steps
+
+## Results
+
+## Next steps
 
 ---
 
@@ -371,22 +488,3 @@ screen -S tensorboard -X quit
   ```bash
   uv run --no-sync python setup/setup_assets.py --datasets-only
   ```
-
----
-
-<a id="experiment-log-2"></a>
-# Experiment Log
-
-## Date
-
-2026-04-17
-
-## Goal
-
-## Environment
-
-## Steps
-
-## Results
-
-## Next steps
