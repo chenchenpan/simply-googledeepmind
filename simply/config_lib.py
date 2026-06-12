@@ -760,6 +760,41 @@ def flops2e16_tfm15m_c4_l2048():
   )
   return config
 
+@ExperimentConfigRegistry.register
+def flops2e16_tfm15m_imdb():
+  """flops2e16_tfm15m architecture trained on IMDB (no C4 download needed)."""
+  config = flops2e16_tfm15m_c4_l2048()
+  return dataclasses.replace(
+      config,
+      vocab_size=151_936,
+      vocab_name='Qwen3',
+      seq_len=256,
+      batch_size=8,
+      num_train_steps=500,
+      dataset=data_lib.DatasetConfig(
+          source=data_lib.TFDSSource(
+              name='imdb_reviews', split='train'),
+          lm_format_name='Pretrain',
+      ),
+      validation_dataset=data_lib.DatasetConfig(
+          source=data_lib.TFDSSource(
+              name='imdb_reviews', split='test'),
+          lm_format_name='Pretrain',
+      ),
+      validation_num_eval_steps=8,
+      validation_eval_interval=100,
+      validation_eval_batch_size=8,
+      lr=opt_lib.LinearWarmupCosineDecay(
+          value=0.01,
+          warmup_steps=50,
+          steps_after_decay=0,
+          end_decay=0.1,
+      ),
+      ckpt_interval=100,
+      tb_log_interval=10,
+  )
+
+
 ##########################
 ## Gemma models.
 ## https://github.com/google-deepmind/gemma/blob/main/gemma/gm/nn/_gemma.py

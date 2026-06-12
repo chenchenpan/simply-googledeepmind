@@ -192,6 +192,106 @@ tail -f /tmp/lm_test_gpu.log
 
 ---
 
+## Step 5: Pretraining from scratch — `flops2e16_tfm15m_imdb`
+
+### Goal
+
+Run a pretraining experiment using the smallest scaling config (`flops2e16_tfm15m`, 14.86M params) without downloading C4. Replaced C4 with IMDB (already cached) to test the training loop end-to-end.
+
+### New config added to `config_lib.py`
+
+```python
+@ExperimentConfigRegistry.register
+def flops2e16_tfm15m_imdb():
+  """flops2e16_tfm15m architecture trained on IMDB (no C4 download needed)."""
+  config = flops2e16_tfm15m_c4_l2048()
+  return dataclasses.replace(
+      config,
+      vocab_size=151_936,
+      vocab_name='Qwen3',
+      seq_len=256,
+      batch_size=8,
+      num_train_steps=500,
+      dataset=data_lib.DatasetConfig(
+          source=data_lib.TFDSSource(
+              name='imdb_reviews', split='train'),
+          lm_format_name='Pretrain',
+      ),
+      validation_dataset=data_lib.DatasetConfig(
+          source=data_lib.TFDSSource(
+              name='imdb_reviews', split='test'),
+          lm_format_name='Pretrain',
+      ),
+      validation_num_eval_steps=8,
+      validation_eval_interval=100,
+      validation_eval_batch_size=8,
+      lr=opt_lib.LinearWarmupCosineDecay(
+          value=0.01,
+          warmup_steps=50,
+          steps_after_decay=0,
+          end_decay=0.1,
+      ),
+      ckpt_interval=100,
+      tb_log_interval=10,
+  )
+```
+
+### Bug 6: GPU OOM during forward pass
+
+**Error:**
+```
+Allocator (GPU_0_bfc) ran out of memory trying to allocate 9.27GiB
+```
+
+**Cause:** The logits tensor shape is `[batch_size, seq_len, vocab_size]`. With `batch_size=32`, `seq_len=512`, `vocab_size=151936` and float32, this is 32 × 512 × 151936 × 4 bytes ≈ **9.25 GiB** — too large for the 15 GB T4.
+
+**Fix:** Reduce `batch_size` and `seq_len`:
+- `batch_size`: 32 → 8
+- `seq_len`: 512 → 256
+
+Logits tensor is now 8 × 256 × 151936 × 4 bytes ≈ **580 MB**.
+
+Also set env vars to prevent TF and JAX from competing for GPU memory at init:
+```bash
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+```
+
+### Command (in screen)
+
+```bash
+screen -dmS pretrain_imdb bash -c '
+  EXP=simply_pretrain_imdb_15m
+  rm -rf /tmp/${EXP}
+  export TF_FORCE_GPU_ALLOW_GROWTH=true
+  export XLA_PYTHON_CLIENT_PREALLOCATE=false
+  uv run --no-sync python -m simply.main \
+    --experiment_config flops2e16_tfm15m_imdb \
+    --experiment_dir /tmp/${EXP} \
+    --alsologtostderr \
+    > /tmp/pretrain_imdb.log 2>&1
+  echo "EXIT CODE: $?" >> /tmp/pretrain_imdb.log
+'
+```
+
+Monitor:
+```bash
+tail -f /tmp/pretrain_imdb.log | grep -E "train_loss:|secs per step"
+```
+
+### Result (in progress, 500 steps total)
+
+| Metric | Value |
+|---|---|
+| Model | 14.86M params, 4 layers, 128 dim |
+| Dataset | IMDB reviews (train / test split) |
+| Loss at step 10 | 12.44 (random init) |
+| Loss at step ~40 | ~5.8 (converging) |
+| Speed (after JIT warmup) | ~0.12 sec/step |
+| Checkpoint dir | `/tmp/simply_pretrain_imdb_15m/` |
+
+---
+
 ## Summary of fixes
 
 | Bug | Symptom | Fix |
@@ -201,6 +301,7 @@ tail -f /tmp/lm_test_gpu.log
 | cuda12 too new (12.9) | `cudaErrorInsufficientDriver` | `uv pip install "nvidia-cuda-runtime-cu12==12.5.82"` |
 | Dual CUDA plugins | `PJRT_Api already exists` | Uninstall all `cuda13` packages |
 | `uv run` re-syncs | Manual package pins reverted | Use `uv run --no-sync` |
+| GPU OOM (logits tensor) | `bfc_allocator` OOM during forward pass | Reduce `batch_size` to 8 and `seq_len` to 256 |
 
 ---
 
@@ -242,5 +343,8 @@ screen -S tensorboard -X quit
 
 ## Next steps
 
-- Run pretraining from scratch with `flops2e16_tfm15m_c4_l2048` (15M params, C4 dataset).
-- Download C4 dataset first: `uv run --no-sync python setup/setup_assets.py --datasets-only`
+- Wait for `flops2e16_tfm15m_imdb` 500-step run to complete and record final loss.
+- Run full pretraining on C4 with `flops2e16_tfm15m_c4_l2048` (requires C4 download):
+  ```bash
+  uv run --no-sync python setup/setup_assets.py --datasets-only
+  ```
