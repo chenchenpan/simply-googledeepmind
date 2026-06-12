@@ -1,5 +1,15 @@
 # Experiment Log
 
+## Index
+
+- [2026-04-16](#experiment-log-1)
+- [2026-04-17](#experiment-log-2)
+
+---
+
+<a id="experiment-log-1"></a>
+# Experiment Log
+
 ## Date
 
 2026-04-16
@@ -9,6 +19,14 @@
 Test the Simply codebase setup end-to-end:
 1. Run `lm_test` on CPU to verify the baseline setup.
 2. Enable GPU support and run the same test on a Tesla T4.
+
+### Steps
+
+- [Step 1: Install dependencies](#apr16-step-1)
+- [Step 2: CPU run — `lm_test`](#apr16-step-2)
+- [Step 3: Enable GPU — `lm_test` in a screen session](#apr16-step-3)
+- [Step 4: Pretraining from scratch — `flops2e16_tfm15m_imdb`](#apr16-step-4)
+- [Step 5: Monitoring with TensorBoard](#apr16-step-5)
 
 ---
 
@@ -26,6 +44,7 @@ Test the Simply codebase setup end-to-end:
 
 ---
 
+<a id="apr16-step-1"></a>
 ## Step 1: Install dependencies
 
 ```bash
@@ -37,6 +56,7 @@ uv sync --extra tfds --extra gpu
 
 ---
 
+<a id="apr16-step-2"></a>
 ## Step 2: CPU run — `lm_test`
 
 ### Command
@@ -76,6 +96,7 @@ rm -rf ~/tensorflow_datasets/imdb_reviews/
 
 ---
 
+<a id="apr16-step-3"></a>
 ## Step 3: Enable GPU — `lm_test` in a screen session
 
 ### Goal
@@ -192,7 +213,8 @@ tail -f /tmp/lm_test_gpu.log
 
 ---
 
-## Step 5: Pretraining from scratch — `flops2e16_tfm15m_imdb`
+<a id="apr16-step-4"></a>
+## Step 4: Pretraining from scratch — `flops2e16_tfm15m_imdb`
 
 ### Goal
 
@@ -305,7 +327,8 @@ tail -f /tmp/pretrain_imdb.log | grep -E "train_loss:|secs per step"
 
 ---
 
-## Step 4: Monitoring with TensorBoard
+<a id="apr16-step-5"></a>
+## Step 5: Monitoring with TensorBoard
 
 Each experiment writes TensorBoard logs to `<experiment_dir>/tb_log/`. Logged metrics include training loss, learning rate, gradient norm, and per-layer weight/gradient RMS stats.
 
@@ -348,3 +371,22 @@ screen -S tensorboard -X quit
   ```bash
   uv run --no-sync python setup/setup_assets.py --datasets-only
   ```
+
+---
+
+<a id="experiment-log-2"></a>
+# Experiment Log
+
+## Date
+
+2026-04-17
+
+## Goal
+
+## Environment
+
+## Steps
+
+## Results
+
+## Next steps
