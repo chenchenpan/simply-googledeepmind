@@ -2,8 +2,139 @@
 
 ## Index
 
+- [2026-06-14](#experiment-log-4)
 - [2026-06-12](#experiment-log-3)
 - [2026-04-16](#experiment-log-1)
+
+---
+
+<a id="experiment-log-4"></a>
+# Experiment Log
+
+## Date
+
+2026-06-14
+
+## Goal
+
+1. Confirm the fork is rebased on the latest upstream.
+2. Explore the codebase and write onboarding notes.
+3. Make a first upstream contribution.
+4. Check personal work-in-progress into the fork.
+
+## Environment
+
+| Component | Value |
+|---|---|
+| Fork (`origin`) | `github.com/chenchenpan/simply-googledeepmind` |
+| Upstream | `github.com/google-deepmind/simply` |
+| Commit identity | `chenchenpan <pcc.pku@gmail.com>` (local to this repo) |
+| `gh` CLI account | `chenchenpan_microsoft` (Enterprise Managed User) |
+| Push auth | PAT for `chenchenpan` via repo-local `credential.helper=store` |
+
+## Steps
+
+### 1. Verify rebase on upstream
+
+`upstream` remote was missing. Added it, fetched, and found `main` was 1 behind
+(`c9a45dc Skip jax.distributed.initialize() on single-host runs`). Rebased the
+6 local commits on top — conflict-free since they don't touch `main.py`.
+
+```bash
+git remote add upstream https://github.com/google-deepmind/simply.git
+git fetch upstream
+git rebase upstream/main
+git push --force-with-lease origin main
+```
+
+### 2. Fix push auth (EMU vs fork owner)
+
+`git push` returned 403: the only `gh`/global identity is
+`chenchenpan_microsoft`, an Enterprise Managed User with no write access to the
+`chenchenpan` fork. Configured a **repo-local** credential store pointing at a
+PAT for `chenchenpan`, so the global identity is untouched for other repos:
+
+```bash
+# token stored at .git/.gh-credentials (perms 600, inside .git so untrackable)
+git config --local credential.https://github.com.helper ""   # reset gh helper
+git config --local --add credential.https://github.com.helper \
+  "store --file=$PWD/.git/.gh-credentials"
+```
+
+### 3. Explore codebase + onboarding notes
+
+Read `main.py` → config → `TrainLoopRegistry` → `run_experiment` flow, the four
+core abstractions (registry, `SimplyModule`, `AnnotatedArray`, config-driven
+`BaseExperimentConfig`), and the module map. Wrote `codebase_notes.md`
+(fork-only, committed to `main`).
+
+### 4. First upstream contribution — `math_eval` fix + tests
+
+Picked a self-contained TODO: `math_eval._str_to_int` converted via `float(x)`,
+losing integer precision above 2^53 (e.g. `'9007199254740993'` →
+`9007199254740992`). Fixed by parsing integers directly:
+
+```python
+def _str_to_int(x: str) -> int:
+  x = x.replace(',', '')
+  try:
+    return int(x)            # arbitrary precision
+  except ValueError:
+    return int(float(x))     # fallback for '1.0', '5e3'
+```
+
+Also added `simply/utils/math_eval_test.py` — first tests for the module,
+`absltest` + `parameterized`, 66 tests, all passing (run via
+`python -m simply.utils.math_eval_test`; `pytest` not in this env).
+
+Branched off **`upstream/main`** (not `main`, to avoid dragging in fork-only
+commits), single commit, pushed to fork, opened **PR #29** via the REST API
+(the `gh` EMU account is blocked from PRs to external repos):
+
+```bash
+git rebase --onto upstream/main main fix/math-eval-int-precision
+git push -u origin fix/math-eval-int-precision
+GH_TOKEN=<chenchenpan PAT> gh api -X POST repos/google-deepmind/simply/pulls \
+  -f title=... -f head="chenchenpan:fix/math-eval-int-precision" -f base=main ...
+```
+
+### 5. Fix failing CLA check (email mismatch)
+
+`cla/google` failed: the commit was authored `chenchenpan@gmail.com`, but the
+signed CLA / GitHub account uses `pcc.pku@gmail.com`. The bot matches on commit
+email → account → CLA. Re-authored the commit and set the repo-local email so
+future commits match; CLA passed after force-push.
+
+```bash
+git config --local user.email pcc.pku@gmail.com
+GIT_COMMITTER_EMAIL=pcc.pku@gmail.com \
+  git commit --amend --no-edit --author="chenchenpan <pcc.pku@gmail.com>"
+git push --force-with-lease origin fix/math-eval-int-precision
+```
+
+### 6. Check personal WIP into the fork
+
+Committed to `main` (kept off the PR branch via stash → checkout → pop):
+- `uv.lock` — locks the `[agent]` extra deps (litellm, openai, tiktoken, …).
+- `notebooks/scratch.ipynb` — cleared-output scratch notebook.
+- `.gitignore` — ignore `.ipynb_checkpoints/`.
+
+## Results
+
+| Item | Outcome |
+|---|---|
+| `main` vs `upstream/main` | Rebased; 0 behind. Fork-only commits ride on top. |
+| Onboarding notes | `codebase_notes.md` on `main` |
+| Upstream PR #29 | Open, `cla/google` ✅, awaiting review |
+| Push auth | Repo-local PAT store for `chenchenpan`; global `gh` untouched |
+
+## Next steps
+
+- Watch PR #29 for maintainer review / CI.
+- **Rotate the PAT** — it was pasted in plaintext this session; update the
+  password in `.git/.gh-credentials` after creating a new `repo`-scoped token.
+- Earlier `main` commits are still authored `chenchenpan@gmail.com`; re-author
+  to `pcc.pku@gmail.com` before contributing any of them upstream.
 
 ---
 
