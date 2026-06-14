@@ -2,9 +2,142 @@
 
 ## Index
 
-- [2026-06-14](#experiment-log-4)
+- [2026-06-14 — local env + GPU driver upgrade](#experiment-log-5)
+- [2026-06-14 — rebase, onboarding, PR #29](#experiment-log-4)
 - [2026-06-12](#experiment-log-3)
 - [2026-04-16](#experiment-log-1)
+
+---
+
+<a id="experiment-log-5"></a>
+# Experiment Log
+
+## Date
+
+2026-06-14
+
+## Goal
+
+Stand up a local environment for interactively testing `simply` code in a
+Jupyter notebook, and get JAX running on the box's two A100 GPUs.
+
+## Environment
+
+| Component | Value |
+|---|---|
+| Host | Azure VM, Ubuntu 22.04.5, kernel `6.8.0-1044-azure` |
+| GPUs | 2 × NVIDIA A100 80GB **PCIe** (no NVSwitch) |
+| Project Python | `>=3.12` (`pyproject.toml`); conda envs were all 3.8/3.10 |
+| Build tool | `uv` (repo ships `uv.lock`) |
+
+## Steps
+
+### 1. Build the project env from the lockfile
+
+No conda env had JAX, and all were < 3.12. Installed `uv` and synced the
+locked deps into a repo-local `.venv` (uv fetched CPython 3.12):
+
+```bash
+pip install uv
+uv sync --extra gpu --extra tfds --extra dev
+```
+
+Result: `.venv/` with Python 3.12, JAX 0.9.0.1, grain/orbax/TFDS/pytest.
+`import simply` works.
+
+### 2. Register a Jupyter kernel + scratch notebook
+
+```bash
+uv pip install --python .venv/bin/python ipykernel
+.venv/bin/python -m ipykernel install --user --name simply \
+  --display-name "Python (simply)"
+```
+
+Created `notebooks/scratch.ipynb` (setup cell adds repo root to `sys.path`,
+env check, `%autoreload 2`). Kernel preset to **Python (simply)**.
+
+### 3. GPU mismatch — driver too old for bundled CUDA
+
+`uv sync --extra gpu` installed `jax[cuda13]` (CUDA 13 runtime), but the
+host driver is **535.274.02 (max CUDA 12.2)**. JAX saw the GPUs but every
+kernel failed: `CUDA_ERROR_INVALID_IMAGE`. Swapping to `jax[cuda12]` (bundles
+CUDA 12.9) got the same image error — minor-version forward-compat can't
+bridge 12.2 → 12.9 for compiled SASS.
+
+Within this repo's deps JAX resolves to 0.9 (older JAX that bundles CUDA
+≤12.2 would break orbax/grain), so the only real fix is a **host driver
+upgrade**. As an interim, registered the kernel with `JAX_PLATFORMS=cpu` so
+the notebook works CPU-only:
+
+```bash
+.venv/bin/python -m ipykernel install --user --name simply \
+  --display-name "Python (simply)" --env JAX_PLATFORMS cpu
+```
+
+### 4. Driver upgrade runbook (535 → 580, for CUDA 13 / `jax[cuda13]`)
+
+Diagnosis of the first failed `apt install cuda-drivers-580`: the 580 pkgs
+*are* available, but (a) the installed **non-server** 535 stack conflicted
+with apt pulling **-server** 580 variants (`nvidia-kernel-common`,
+`nvidia-fabricmanager` Conflicts), and (b) a stale local repo
+(`nvidia-driver-local-repo-ubuntu2204-535.183.06`, priority 600) plus a
+wrong-distro `cudnn-local-repo-ubuntu2004` pinned old packages. Fix =
+purge old stack + stale repos, then install one coherent branch. PCIe A100s
+need no fabricmanager.
+
+```bash
+# 0. snapshot
+nvidia-smi > ~/nvidia_before_upgrade.txt
+
+# 1. stop services + remove stale/wrong-distro local repos
+sudo systemctl stop nvidia-fabricmanager 2>/dev/null
+sudo apt-get purge -y nvidia-driver-local-repo-ubuntu2204-535.183.06 \
+                      cudnn-local-repo-ubuntu2004-9.1.1
+
+# 2. purge the 535 driver stack (scoped to -535; leaves container toolkit)
+sudo apt-get purge -y 'nvidia-*-535' 'libnvidia-*-535' \
+    cuda-drivers-535 cuda-drivers-fabricmanager-535 nvidia-fabricmanager-535
+sudo apt-get autoremove -y
+sudo apt-get update
+
+# 3. install clean 580 (non-server, matches pyproject 'gpu' extra)
+sudo apt-get install -y cuda-drivers-580
+
+# 4. confirm DKMS built before rebooting
+dkms status        # expect nvidia/580.159.04, 6.8.0-1044-azure: installed
+
+# 5. reboot + verify
+sudo reboot
+nvidia-smi         # expect Driver 580.159.04, CUDA 13.x, both A100s
+```
+
+Rollback: `sudo apt-get install -y cuda-drivers-535 && sudo reboot`.
+
+### 5. Post-upgrade: flip the venv back to GPU (after 580 is live)
+
+```bash
+cd /home/azureuser/Projects/simply-googledeepmind
+uv pip uninstall --python .venv/bin/python jax-cuda12-plugin jax-cuda12-pjrt
+uv pip install   --python .venv/bin/python "jax[cuda13]"
+# re-register WITHOUT the CPU lock
+.venv/bin/python -m ipykernel install --user --name simply \
+  --display-name "Python (simply)"
+.venv/bin/python -c "import jax; print(jax.devices())"  # expect 2 CudaDevices
+```
+
+## Results
+
+| Item | Outcome |
+|---|---|
+| Project `.venv` (Python 3.12) | Built from `uv.lock`; `import simply` OK |
+| Jupyter kernel `Python (simply)` | Registered; CPU JAX verified (matmul OK) |
+| `notebooks/scratch.ipynb` | Created, kernel preset |
+| GPU execution | Blocked on driver 535 < CUDA 13; runbook above |
+
+## Next steps
+
+- Run the step-4 runbook (sudo) to upgrade to driver 580, then step 5 to
+  re-enable GPU JAX and confirm both A100s execute.
 
 ---
 
