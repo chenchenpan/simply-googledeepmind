@@ -2,9 +2,9 @@
 
 ## Index
 
-- [2026-06-14 — local env + GPU driver upgrade](#experiment-log-5)
-- [2026-06-14 — rebase, onboarding, PR #29](#experiment-log-4)
-- [2026-06-12](#experiment-log-3)
+- [2026-06-13 — local env + GPU driver upgrade](#experiment-log-5)
+- [2026-06-13 — rebase, onboarding, PR #29](#experiment-log-4)
+- [2026-06-11](#experiment-log-3)
 - [2026-04-16](#experiment-log-1)
 
 ---
@@ -14,7 +14,7 @@
 
 ## Date
 
-2026-06-14
+2026-06-13
 
 ## Goal
 
@@ -146,7 +146,7 @@ uv pip install   --python .venv/bin/python "jax[cuda13]"
 
 ## Date
 
-2026-06-14
+2026-06-13
 
 ## Goal
 
@@ -276,7 +276,7 @@ Committed to `main` (kept off the PR branch via stash → checkout → pop):
 
 ## Date
 
-2026-06-12
+2026-06-11
 
 ## Goal
 
