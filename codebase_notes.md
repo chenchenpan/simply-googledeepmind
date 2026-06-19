@@ -4,7 +4,7 @@ A personal onboarding note — what I learned while first exploring this repo.
 Kept separate from `experiments_note.md` (that file is for experiment logs;
 this one is for understanding the code).
 
-Last updated: 2026-06-14
+Last updated: 2026-06-18
 
 ---
 
@@ -132,6 +132,49 @@ pytest simply/model_lib_test.py::ModelTest::test_forward_pass
 
 Env vars: `SIMPLY_MODELS`, `SIMPLY_DATASETS`, `SIMPLY_VOCABS`,
 `JAX_DISABLE_JIT`.
+
+---
+
+## Contribution landscape (surveyed 2026-06-18)
+
+### Upstream repo: `google-deepmind/simply`
+
+**Open issues:**
+- **#6** — "Next step for Contributions" — community member asking for
+  guidance; no official reply yet.
+- **#2** — Feature request: add advanced post-training & fine-tuning
+  (DPO, PPO, RLHF, SFT, knowledge distillation, eval frameworks).
+  Large scope; `rl_lib.py` already has GRPO as a starting point.
+- **#1** — "Access to Orbax Checkpoints" — checkpoint UX / access
+  question.
+
+**Open PRs:** all Dependabot bumps (cryptography, aiohttp, idna,
+urllib3, gitpython, pytest, pillow, pygments, requests, pyasn1).
+No feature PRs pending.
+
+**Upstream branch of interest:**
+`upstream/keep-routing-and-sampling-mask` — unmerged feature branch.
+
+### My prior contributions
+
+- **PR #29** (merged) — `fix/math-eval-int-precision`: fixed
+  `_str_to_int` precision loss above 2^53; added `math_eval` tests.
+
+### Contribution ideas by effort level
+
+| Effort | Idea | Entry point |
+|--------|------|-------------|
+| 🟢 Low | Add tests / improve coverage | any exploration item below |
+| 🟢 Low | Documentation improvements | pain points from onboarding |
+| 🟡 Medium | Checkpoint UX (issue #1) | `utils/checkpoint_lib.py` |
+| 🟡 Medium | Data pipeline presets / HF improvements | `data_lib.py` |
+| 🔴 High | DPO / SFT post-training (issue #2) | `rl_lib.py`, `config_lib.py` |
+
+### Recommended approach
+
+Pick an open exploration item that aligns with an issue:
+- Explore **checkpoints** → contribute to **issue #1**
+- Explore **RL loop** → build toward **issue #2** (DPO/SFT)
 
 ---
 

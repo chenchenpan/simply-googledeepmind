@@ -2,10 +2,120 @@
 
 ## Index
 
+- [2026-06-18 — GPU driver upgrade attempt + contribution planning](#experiment-log-6)
 - [2026-06-13 — local env + GPU driver upgrade](#experiment-log-5)
 - [2026-06-13 — rebase, onboarding, PR #29](#experiment-log-4)
 - [2026-06-11](#experiment-log-3)
 - [2026-04-16](#experiment-log-1)
+
+---
+
+<a id="experiment-log-6"></a>
+# Experiment Log
+
+## Date
+
+2026-06-18
+
+## Goal
+
+1. Resume codebase exploration; survey contribution opportunities.
+2. Attempt GPU setup (driver upgrade from 535 → 580).
+
+## Environment
+
+| Component | Value |
+|---|---|
+| Host | Azure VM, Ubuntu 22.04.5, kernel `6.8.0-1044-azure` |
+| GPUs | 2 × NVIDIA A100 80GB PCIe |
+| Driver (current) | **535.274.02** (max CUDA 12.2) |
+| `.venv` | Python 3.12.13, JAX 0.9.0.1, `jax[cuda13]` plugin |
+
+## Findings
+
+### Contribution landscape
+
+Surveyed upstream issues and PRs; added a "Contribution landscape" section to
+`codebase_notes.md`. Key opportunities:
+- Issue #1 — Orbax checkpoint access/UX
+- Issue #2 — Post-training (DPO/PPO/SFT); `rl_lib.py` already has GRPO
+- Issue #6 — Community asking for contribution guidance
+
+### GPU status
+
+JAX 0.9 detects both A100s (`CudaDevice(id=0)`, `CudaDevice(id=1)`) but
+**cannot execute kernels** — same `CUDA_ERROR_INVALID_IMAGE` from last
+session. Root cause unchanged: driver 535 only provides CUDA 12.2 runtime,
+while the `jax-cuda13-plugin` bundles PTX/SASS targeting CUDA 13.
+
+## Next steps — driver upgrade runbook (requires sudo + reboot)
+
+Run these in order. Rollback: `sudo apt-get install -y cuda-drivers-535 &&
+sudo reboot`.
+
+```bash
+# 0. Snapshot current state
+nvidia-smi > ~/nvidia_before_upgrade.txt
+
+# 1. Remove stale/wrong-distro local repos that pin old packages
+sudo apt-get purge -y nvidia-driver-local-repo-ubuntu2204-535.183.06 \
+                      cudnn-local-repo-ubuntu2004-9.1.1 2>/dev/null
+sudo rm -f /etc/apt/sources.list.d/nvidia-driver-local* \
+           /etc/apt/sources.list.d/cudnn-local*
+
+# 2. Purge the entire 535 driver stack
+sudo apt-get purge -y 'nvidia-*-535' 'libnvidia-*-535' \
+    cuda-drivers-535 cuda-drivers-fabricmanager-535 \
+    nvidia-fabricmanager-535
+sudo apt-get autoremove -y
+sudo apt-get update
+
+# 3. Install 580 (non-server; PCIe A100 needs no fabricmanager)
+sudo apt-get install -y cuda-drivers-580
+
+# 4. Verify DKMS built the module before rebooting
+dkms status   # expect: nvidia/580.x.x, 6.8.0-1044-azure: installed
+
+# 5. Reboot
+sudo reboot
+```
+
+### After reboot — verify & re-enable GPU JAX
+
+```bash
+# Confirm driver
+nvidia-smi   # expect Driver 580.x, CUDA 13.x, both A100s listed
+
+# Re-register Jupyter kernel (no CPU-only lock)
+cd /home/azureuser/Projects/simply-googledeepmind
+.venv/bin/python -m ipykernel install --user --name simply \
+  --display-name "Python (simply)"
+
+# Verify GPU execution end-to-end
+.venv/bin/python -c "
+import jax, jax.numpy as jnp
+x = jnp.ones((1024, 1024))
+y = x @ x
+print('Devices:', jax.devices())
+print('Result:', y.shape, float(y[0,0]))
+"
+# Expect: [CudaDevice(id=0), CudaDevice(id=1)], shape (1024,1024), val 1024.0
+```
+
+### After GPU works — run the test suite
+
+```bash
+cd /home/azureuser/Projects/simply-googledeepmind
+.venv/bin/python -m pytest simply/ --tb=short -q
+```
+
+## Results
+
+| Item | Outcome |
+|---|---|
+| Contribution landscape survey | Done; recorded in `codebase_notes.md` |
+| GPU kernel execution | Still blocked on driver 535 → 580 upgrade |
+| Driver upgrade | **Not yet run** — runbook above ready to execute |
 
 ---
 
