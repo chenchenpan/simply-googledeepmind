@@ -109,24 +109,6 @@ cd /home/azureuser/Projects/simply-googledeepmind
 .venv/bin/python -m pytest simply/ --tb=short -q
 ```
 
-### Quick checklist after reboot
-
-```bash
-# 1. Verify driver
-nvidia-smi
-
-# 2. Verify JAX GPU execution
-cd ~/Projects/simply-googledeepmind
-.venv/bin/python -c "import jax; print(jax.devices())"
-
-# 3. If it works, re-register Jupyter kernel (removes CPU-only lock)
-.venv/bin/python -m ipykernel install --user --name simply \
-  --display-name "Python (simply)"
-
-# 4. Run test suite
-.venv/bin/python -m pytest simply/ --tb=short -q
-```
-
 ## Results
 
 | Item | Outcome |
