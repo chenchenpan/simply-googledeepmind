@@ -114,8 +114,18 @@ cd /home/azureuser/Projects/simply-googledeepmind
 | Item | Outcome |
 |---|---|
 | Contribution landscape survey | Done; recorded in `codebase_notes.md` |
-| GPU kernel execution | Still blocked on driver 535 → 580 upgrade |
-| Driver upgrade | **Not yet run** — runbook above ready to execute |
+| Driver upgrade (535 → 580) | ✅ Done — Driver 580.167.08, CUDA 13.0 |
+| GPU kernel execution | ✅ JAX 0.9 matmul on both A100s works |
+| Test suite (`simply/`, excl. agent) | **388 passed, 53 failed, 8 skipped** (4m52s) |
+
+### Test failure analysis (all pre-existing, not caused by setup)
+
+- **~40 sharding/pjit failures** — tests assume 4+ or 8 devices; we have 2
+  A100s. Affects `MoETest`, `EinsumLinearTest`, `ShardingTest`,
+  `QwenFormatTest`, some `ModelLibTest` sampling tests.
+- **4 `evaluation_lib_test`** — `ModuleNotFoundError` for optional dep
+  (`vllm` or similar).
+- **1 `AnswerNormalizerTest`** — likely same missing dep.
 
 ---
 
