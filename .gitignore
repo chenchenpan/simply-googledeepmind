@@ -7,3 +7,7 @@ wandb/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Generated gRPC stubs (see setup/gen_protos.py)
+simply/serving/*_pb2.py
+simply/serving/*_pb2_grpc.py
