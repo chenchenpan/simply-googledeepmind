@@ -15,6 +15,15 @@ environment / tooling, not committed to the repo), **Docs**.
 
 ## [Unreleased]
 
+### Added
+- Personal `CHANGELOG.md` to track fork work (incl. local-only changes).
+  (`138cb96`)
+
+### Changed
+- Synced fork with upstream: merged `upstream/main` (Bash-tool disabled-timeout
+  fix + dependency bumps — werkzeug, pyasn1, requests, pygments). Clean merge,
+  no conflicts; `uv lock --check` passed. (merge `ddf895a`)
+
 ### Infra
 - Set up local **amplio** agent harness (under `amplio/`): installed Go 1.26.2 +
   Node 22 toolchains to `~/toolchains/`, built the binary, and pointed it at the
