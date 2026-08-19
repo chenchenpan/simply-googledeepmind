@@ -20,6 +20,12 @@ environment / tooling, not committed to the repo), **Docs**.
   (`138cb96`)
 
 ### Changed
+- Synced fork with upstream: merged `upstream/main` (reworked ragged paged
+  attention — KV write-back clamp removed, host-RAM prefix cache
+  PrefixNode/ChunkTile/ChunkHolder, new page batcher, much expanded serving
+  tests; plus dependency bumps — aiohttp, cryptography, keras, gitpython,
+  urllib3, pytest, pillow). Clean merge, no conflicts; `uv lock --check` passed.
+  (merge `a17ab86`)
 - Synced fork with upstream: merged `upstream/main` (Bash-tool disabled-timeout
   fix + dependency bumps — werkzeug, pyasn1, requests, pygments). Clean merge,
   no conflicts; `uv lock --check` passed. (merge `ddf895a`)
