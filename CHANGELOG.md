@@ -36,6 +36,11 @@ environment / tooling, not committed to the repo), **Docs**.
   GitHub Copilot OpenAI-compatible endpoint (`~/.amplio/config.toml`; secrets via
   env vars). Exposed it remotely via a Cloudflare quick tunnel. *(Local only — not
   committed.)*
+- amplio: added `.env.example` template and gitignore rules for local secret env
+  files (`.env`, `.env.*`, `start-amplio.sh`) so the short-lived `COPILOT_TOKEN`
+  can be kept in a gitignored `amplio/.env.local` and loaded by a `start-amplio.sh`
+  restart wrapper. Prompted by all runs crashing with "missing required
+  Authorization header" when the server is started without `COPILOT_TOKEN`.
 
 ## 2026-08-17
 
