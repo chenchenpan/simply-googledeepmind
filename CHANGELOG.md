@@ -37,10 +37,11 @@ environment / tooling, not committed to the repo), **Docs**.
   env vars). Exposed it remotely via a Cloudflare quick tunnel. *(Local only — not
   committed.)*
 - amplio: added `.env.example` template and gitignore rules for local secret env
-  files (`.env`, `.env.*`, `start-amplio.sh`) so the short-lived `COPILOT_TOKEN`
-  can be kept in a gitignored `amplio/.env.local` and loaded by a `start-amplio.sh`
-  restart wrapper. Prompted by all runs crashing with "missing required
-  Authorization header" when the server is started without `COPILOT_TOKEN`.
+  files (`.env`, `.env.*`, `start-amplio.sh`). The `start-amplio.sh` restart
+  wrapper auto-mints a fresh short-lived `COPILOT_TOKEN` from the Copilot CLI's
+  `~/.copilot/config.json` (`copilotTokens`) on each start, then restarts
+  `amplio serve`. Fixes all runs crashing with "missing required Authorization
+  header" when the server was started without `COPILOT_TOKEN`.
 
 ## 2026-08-17
 
