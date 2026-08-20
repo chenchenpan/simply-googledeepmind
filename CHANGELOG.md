@@ -42,6 +42,15 @@ environment / tooling, not committed to the repo), **Docs**.
   `~/.copilot/config.json` (`copilotTokens`) on each start, then restarts
   `amplio serve`. Fixes all runs crashing with "missing required Authorization
   header" when the server was started without `COPILOT_TOKEN`.
+- amplio: switched remote access from the Cloudflare quick tunnel to a
+  **Microsoft Dev Tunnel** (`amplio-ui`) because Cloudflare buffers SSE
+  (`text/event-stream`), so live chat updates never streamed and required a
+  manual browser refresh. Dev Tunnels stream SSE correctly, so updates now
+  appear in real time. Logged in via GitHub (`devtunnel user login -g -d`) since
+  Entra device-code auth is blocked by org Conditional Access; retired the
+  Cloudflare tunnel. `start-amplio.sh` now also (re)hosts the Dev Tunnel on each
+  start (idempotent; configurable via `AMPLIO_TUNNEL_NAME` / `DEVTUNNEL_BIN`),
+  documented in `.env.example` (`b3443b3`). *(Local only — not committed.)*
 
 ## 2026-08-17
 
